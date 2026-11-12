@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>신호텍 연구소 주간 업무 보고 시스템</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SheetJS (xlsx-js-style for styling support) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Pretendard', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- Top Navigation Bar -->
+    <header class="bg-slate-900 text-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-green-500 text-slate-900 p-2 rounded-lg font-black text-xl flex items-center justify-center w-9 h-9">
+                        ◇
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-lg leading-none tracking-tight">SHINHOTEK</h1>
+                        <p class="text-xs text-slate-400 mt-0.5">연구소 주간 업무 보고 시스템</p>
+                    </div>
+                </div>
+
+                <!-- User Info & Action Buttons -->
+                <div id="navUserSection" class="hidden flex items-center space-x-4">
+                    <div class="text-right">
+                        <span id="navUserName" class="block text-sm font-semibold text-white"></span>
+                        <span id="navUserRole" class="block text-xs text-green-400 font-medium"></span>
+                    </div>
+                    <button onclick="handleLogout()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-3 py-2 rounded-lg border border-slate-700 transition">
+                        <i class="fa-solid fa-right-from-bracket mr-1"></i> 로그아웃
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <!-- Login Card Section -->
+        <div id="loginSection" class="max-w-md mx-auto my-12 bg-white p-8 rounded-2xl shadow-xl border border-slate-100">
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-green-100 text-green-600 rounded-2xl mb-4">
+                    <i class="fa-solid fa-user-lock text-2xl"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-slate-900">시스템 로그인</h2>
+                <p class="text-sm text-slate-500 mt-1">연구소 팀원 계정으로 접속하세요.</p>
+            </div>
+
+            <form onsubmit="handleLogin(event)" class="space-y-5">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase">아이디 (ID)</label>
+                    <input type="text" id="loginId" required class="w-full px-4 py-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-green-500 text-sm transition" placeholder="아이디 입력 (예: eunha, wspark)">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase">비밀번호</label>
+                    <input type="password" id="loginPw" required class="w-full px-4 py-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-green-500 text-sm transition" placeholder="비밀번호 입력">
+                </div>
+                <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3.5 rounded-xl shadow-lg transition duration-200 text-sm">
+                    로그인
+                </button>
+            </form>
+
+            <div class="mt-8 pt-6 border-t border-slate-100 text-xs text-slate-400 text-center">
+                <p class="font-medium text-slate-500 mb-1">테스트용 기본 계정 안내</p>
+                <p>강은하 (eunha / 1234) | 박원석 (wspark / 1234)</p>
+                <p>파리드 (Farid / 1234) | 윤선한 (shyoon / 1234)</p>
+            </div>
+        </div>
+
+        <!-- Dashboard App Section (Hidden by Default) -->
+        <div id="appSection" class="hidden space-y-6">
+
+            <!-- Sub Navigation Tabs & Export Button -->
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div class="flex space-x-2 w-full md:w-auto">
+                    <button id="tabBtnList" onclick="switchTab('list')" class="flex-1 md:flex-none px-5 py-2.5 rounded-xl text-sm font-bold transition bg-green-600 text-white shadow-sm">
+                        <i class="fa-solid fa-list-check mr-2"></i> 전체 현황 보기
+                    </button>
+                    <button id="tabBtnForm" onclick="switchTab('form')" class="flex-1 md:flex-none px-5 py-2.5 rounded-xl text-sm font-bold transition bg-slate-100 text-slate-600 hover:bg-slate-200">
+                        <i class="fa-solid fa-pen-to-square mr-2"></i> 내 업무 보고 작성/수정
+                    </button>
+                    <button id="tabBtnUsers" onclick="switchTab('users')" class="flex-1 md:flex-none px-5 py-2.5 rounded-xl text-sm font-bold transition bg-slate-100 text-slate-600 hover:bg-slate-200">
+                        <i class="fa-solid fa-users-gear mr-2"></i> 계정 관리 및 비번 변경
+                    </button>
+                </div>
+
+                <div class="flex items-center space-x-3 w-full md:w-auto justify-end">
+                    <span id="syncStatusBadge" class="text-xs font-medium px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span> 실시간 동기화 연결됨
+                    </span>
+                    <button onclick="exportToExcel()" class="w-full md:w-auto px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-xl shadow-md transition flex items-center justify-center">
+                        <i class="fa-solid fa-file-excel mr-2 text-base"></i> 엑셀(.xlsx) 다운로드
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tab 1: Overall Summary List View -->
+            <div id="viewList" class="space-y-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
+                        <div>
+                            <h2 class="text-xl font-bold text-slate-900">신호텍 연구소 주간 업무 보고 현황</h2>
+                            <p class="text-xs text-slate-500 mt-1">팀원별 주간 진행 사항 및 이슈 목록</p>
+                        </div>
+                        <span class="text-xs bg-slate-100 text-slate-600 px-3 py-1.5 rounded-full font-medium" id="reportCountBadge">
+                            총 0건의 보고
+                        </span>
+                    </div>
+
+                    <div id="reportsListContainer" class="space-y-8">
+                        <!-- Dynamic Report Cards will be rendered here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 2: My Report Form View -->
+            <div id="viewForm" class="hidden bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <div class="mb-6 pb-4 border-b border-slate-100">
+                    <h2 class="text-xl font-bold text-slate-900">주간 업무 보고 작성</h2>
+                    <p class="text-xs text-slate-500 mt-1">프로젝트별 진행 현황과 금주/차주 주요 업무를 등록합니다.</p>
+                </div>
+
+                <form id="reportForm" onsubmit="handleFormSubmit(event)" class="space-y-6">
+                    <div class="border-b border-slate-100 pb-4 flex justify-between items-center">
+                        <h3 class="text-lg font-bold text-slate-800">프로젝트 세부 항목 작성</h3>
+                        <button type="button" onclick="addProjectRow()" class="text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium px-3 py-1.5 rounded-lg transition">
+                            <i class="fa-solid fa-plus mr-1"></i> 프로젝트 항목 추가
+                        </button>
+                    </div>
+
+                    <div id="projectRowsContainer" class="space-y-4">
+                        <!-- Dynamic Project Rows Will Be Inserted Here -->
+                    </div>
+
+                    <!-- Other Task Input -->
+                    <div class="pt-4 border-t border-slate-100">
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">Other (기타 업무 및 공지사항)</label>
+                        <textarea id="otherTask" rows="3" class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-green-500 outline-none text-sm" placeholder="기타 업무 내용을 자유롭게 작성하세요."></textarea>
+                    </div>
+
+                    <div class="flex justify-end">
+                        <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-semibold px-8 py-3 rounded-xl shadow-lg shadow-green-600/30 transition">
+                            업무 보고 등록하기
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Tab 3: Account & Password Management -->
+            <div id="viewUsers" class="hidden space-y-6">
+                <!-- Change Password Box -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <h3 class="text-lg font-bold text-slate-900 mb-4 pb-2 border-b border-slate-100">
+                        <i class="fa-solid fa-key text-green-600 mr-2"></i>내 비밀번호 변경
+                    </h3>
+                    <form onsubmit="handleChangePassword(event)" class="max-w-md space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">현재 비밀번호</label>
+                            <input type="password" id="currentPw" required class="w-full px-4 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-green-500 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">새 비밀번호</label>
+                            <input type="password" id="newPw" required class="w-full px-4 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-green-500 text-sm">
+                        </div>
+                        <button type="submit" class="bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold px-6 py-2.5 rounded-xl transition">
+                            비밀번호 수정 완료
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Create User Box (Admin Only) -->
+                <div id="createUserCard" class="hidden bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <h3 class="text-lg font-bold text-slate-900 mb-4 pb-2 border-b border-slate-100">
+                        <i class="fa-solid fa-user-plus text-green-600 mr-2"></i>신규 계정 추가 (관리자 전용)
+                    </h3>
+                    <form onsubmit="handleCreateUser(event)" class="max-w-md space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">아이디 (ID)</label>
+                            <input type="text" id="newUserId" required class="w-full px-4 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-green-500 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">이름 (작성자명)</label>
+                            <input type="text" id="newUserName" required class="w-full px-4 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-green-500 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">초기 비밀번호</label>
+                            <input type="password" id="newUserPw" required class="w-full px-4 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-green-500 text-sm">
+                        </div>
+                        <button type="submit" class="bg-green-600 hover:bg-green-700 text-white text-sm font-bold px-6 py-2.5 rounded-xl transition">
+                            신규 계정 등록
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Toast Notification Container -->
+    <div id="toast" class="fixed bottom-5 right-5 hidden px-5 py-3 rounded-xl text-white font-medium text-sm shadow-2xl z-50 transition transform"></div>
+
+    <!-- Application Script with Cloud Synchronization -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Cloud Initialization
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'shinhotek-weekly-report';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+
+        let db = null;
+        let auth = null;
+        let cloudUser = null;
+
+        // System Default Users
+        const DEFAULT_USERS = [
+            { id: 'eunha', name: '강은하', pw: '1234', role: '연구원' },
+            { id: 'wspark', name: '박원석', pw: '1234', role: '연구원' },
+            { id: 'Farid', name: '파리드', pw: '1234', role: '연구원' },
+            { id: 'shyoon', name: '윤선한', pw: '1234', role: '팀장' }
+        ];
+
+        const PROJECT_OPTIONS = ['Confirmed_Orders', 'Pre-Sales_Review', 'Shinhotek'];
+
+        // Sample Initial Data matching exact 2nd picture reference
+        const INITIAL_REPORTS = [
+            {
+                id: 'rep_1',
+                authorId: 'eunha',
+                authorName: '강은하',
+                projects: [
+                    { project: 'Confirmed_Orders', customer: 'DIT', item: 'Line Beam', startDate: '11/25', endDate: '04/16', rate: '100', thisWeek: '11/03: 레이저 및 모듈 검사\n11/04: 레이저 및 모듈 데모 출장', nextWeek: '가공품 진행 여부 결정', issues: 'DIT에서 동작 후 Hz 및 듀티 1차 확인은 완료했으나,\nDIT 내 하이파워용 레이저 파워미터가 부재하여 최대 출력 측정이 불가능.\nDIT 외부 통신 관련 정보 요청 건이 있음 >> 영업부에서 대응 중', code: '' },
+                    { project: 'Pre-Sales_Review', customer: 'KIMM', item: '중수도 애세이용 광학계-신규', startDate: '07/24', endDate: '-', rate: '20', thisWeek: '11/06: 상세 설계', nextWeek: '가공품 진행 여부 결정', issues: '12월 말 납기 건으로, 차주 진행 여부 확정 후 즉시 가공품 진행 필요', code: '' },
+                    { project: 'Shinhotek', customer: 'Shinhotek', item: 'LUM-Z', startDate: '07/22', endDate: '11/30', rate: '60', thisWeek: '11/05: 일부 구매품 발주\n11/05: 전선도 작성 및 견적\n11/05: 플라스틱 케이스 견적', nextWeek: '국책 예산 확정 표 작성 및 공유', issues: '11월 전시회 일정으로 인해 17일까지 전시 가능한 제품이 완성되어야 하는 상황\n가공품 납기 확인 결과 차주 초 입고 완료 예정이며,\n일부 구매품은 목요일 발주 진행 완료 (예상 입고일 : 차주 목요일)', code: '26GP 강은하' }
+                ],
+                otherTask: ''
+            },
+            {
+                id: 'rep_2',
+                authorId: 'wspark',
+                authorName: '박원석',
+                projects: [
+                    { project: 'Shinhotek', customer: 'Shinhotek', item: 'LUM-P200', startDate: '08/10', endDate: '10/31', rate: '100', thisWeek: '광학계 정밀 튜닝 완료 및 양산 검증', nextWeek: '제품 출하 및 고객사 인도', issues: '성능 데이터 검증 완료', code: 'WS-01' }
+                ],
+                otherTask: ''
+            },
+            {
+                id: 'rep_3',
+                authorId: 'Farid',
+                authorName: '파리드',
+                projects: [
+                    { project: 'Confirmed_Orders', customer: 'TOKYO-SEIMITSU', item: 'TOKYO-SEIMITSU EP', startDate: '09/01', endDate: '12/20', rate: '50', thisWeek: '11/04: Hardware module test completed\n11/05: Firmware alignment setup', nextWeek: 'System communication verification with client team', issues: 'Module latency optimization required', code: 'FD-88' }
+                ],
+                otherTask: ''
+            }
+        ];
+
+        let currentUser = null;
+        let reportsData = [...INITIAL_REPORTS];
+        let usersData = [...DEFAULT_USERS];
+
+        // App Initialization with Cloud Auth & Real-time Listeners
+        async function initApp() {
+            if (firebaseConfig) {
+                try {
+                    const app = initializeApp(firebaseConfig);
+                    db = getFirestore(app);
+                    auth = getAuth(app);
+
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        const cred = await signInWithCustomToken(auth, __initial_auth_token);
+                        cloudUser = cred.user;
+                    } else {
+                        const cred = await signInAnonymously(auth);
+                        cloudUser = cred.user;
+                    }
+
+                    setupCloudListeners();
+                } catch (err) {
+                    console.error("Cloud connection failed:", err);
+                    updateSyncBadge(false);
+                }
+            } else {
+                updateSyncBadge(false);
+            }
+
+            // Check Session
+            const sessionUser = sessionStorage.getItem('shinhotek_session');
+            if (sessionUser) {
+                currentUser = JSON.parse(sessionUser);
+                showDashboard();
+            } else {
+                showLogin();
+            }
+        }
+
+        function updateSyncBadge(isConnected) {
+            const badge = document.getElementById('syncStatusBadge');
+            if (!badge) return;
+            if (isConnected) {
+                badge.className = "text-xs font-medium px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center";
+                badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span> 실시간 동기화 연결됨';
+            } else {
+                badge.className = "text-xs font-medium px-3 py-1.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 flex items-center";
+                badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-500 mr-1.5"></span> 로컬 모드';
+            }
+        }
+
+        // Real-time Firestore Listeners
+        function setupCloudListeners() {
+            if (!db || !cloudUser) return;
+
+            // 1. Listen to Users Collection
+            const usersColRef = collection(db, 'artifacts', appId, 'public', 'data', 'users');
+            onSnapshot(usersColRef, async (snapshot) => {
+                if (snapshot.empty) {
+                    // Seed default users to cloud on first boot
+                    for (const u of DEFAULT_USERS) {
+                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', u.id), u);
+                    }
+                    usersData = [...DEFAULT_USERS];
+                } else {
+                    usersData = snapshot.docs.map(d => d.data());
+                }
+
+                // Refresh currentUser info if logged in
+                if (currentUser) {
+                    const updatedMe = usersData.find(u => u.id === currentUser.id);
+                    if (updatedMe) {
+                        currentUser = updatedMe;
+                        sessionStorage.setItem('shinhotek_session', JSON.stringify(currentUser));
+                    }
+                }
+            }, (error) => {
+                console.error("Users sync error:", error);
+            });
+
+            // 2. Listen to Reports Collection
+            const reportsColRef = collection(db, 'artifacts', appId, 'public', 'data', 'reports');
+            onSnapshot(reportsColRef, async (snapshot) => {
+                if (snapshot.empty) {
+                    // Seed initial sample reports on first boot
+                    for (const r of INITIAL_REPORTS) {
+                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'reports', r.authorId), r);
+                    }
+                    reportsData = [...INITIAL_REPORTS];
+                } else {
+                    reportsData = snapshot.docs.map(d => d.data());
+                }
+
+                if (currentUser) {
+                    renderReportsList();
+                }
+            }, (error) => {
+                console.error("Reports sync error:", error);
+            });
+        }
+
+        // Show Login Screen
+        function showLogin() {
+            document.getElementById('loginSection').classList.remove('hidden');
+            document.getElementById('appSection').classList.add('hidden');
+            document.getElementById('navUserSection').classList.add('hidden');
+        }
+
+        // Show Dashboard Screen
+        function showDashboard() {
+            document.getElementById('loginSection').classList.add('hidden');
+            document.getElementById('appSection').classList.remove('hidden');
+            document.getElementById('navUserSection').classList.remove('hidden');
+
+            document.getElementById('navUserName').innerText = currentUser.name + " 님";
+            document.getElementById('navUserRole').innerText = currentUser.role || '연구원';
+
+            // Show Create User section ONLY for Administrator (shyoon / 팀장)
+            const createUserCard = document.getElementById('createUserCard');
+            if (currentUser.role === '팀장' || currentUser.id === 'shyoon') {
+                createUserCard.classList.remove('hidden');
+            } else {
+                createUserCard.classList.add('hidden');
+            }
+
+            renderReportsList();
+            populateUserForm();
+        }
+
+        // Handle Login
+        function handleLogin(e) {
+            e.preventDefault();
+            const id = document.getElementById('loginId').value.trim();
+            const pw = document.getElementById('loginPw').value.trim();
+
+            const user = usersData.find(u => u.id === id && u.pw === pw);
+            if (user) {
+                currentUser = user;
+                sessionStorage.setItem('shinhotek_session', JSON.stringify(user));
+                showToast(`${user.name}님 반갑습니다!`, 'success');
+                showDashboard();
+            } else {
+                showToast('아이디 또는 비밀번호가 일치하지 않습니다.', 'error');
+            }
+        }
+
+        // Handle Logout
+        function handleLogout() {
+            sessionStorage.removeItem('shinhotek_session');
+            currentUser = null;
+            showToast('로그아웃 되었습니다.', 'info');
+            showLogin();
+        }
+
+        // Switch Tabs
+        function switchTab(tab) {
+            const listBtn = document.getElementById('tabBtnList');
+            const formBtn = document.getElementById('tabBtnForm');
+            const usersBtn = document.getElementById('tabBtnUsers');
+
+            const viewList = document.getElementById('viewList');
+            const viewForm = document.getElementById('viewForm');
+            const viewUsers = document.getElementById('viewUsers');
+
+            listBtn.className = "flex-1 md:flex-none px-5 py-2.5 rounded-xl text-sm font-bold transition bg-slate-100 text-slate-600 hover:bg-slate-200";
+            formBtn.className = "flex-1 md:flex-none px-5 py-2.5 rounded-xl text-sm font-bold transition bg-slate-100 text-slate-600 hover:bg-slate-200";
+            usersBtn.className = "flex-1 md:flex-none px-5 py-2.5 rounded-xl text-sm font-bold transition bg-slate-100 text-slate-600 hover:bg-slate-200";
+
+            viewList.classList.add('hidden');
+            viewForm.classList.add('hidden');
+            viewUsers.classList.add('hidden');
+
+            if (tab === 'list') {
+                listBtn.className = "flex-1 md:flex-none px-5 py-2.5 rounded-xl text-sm font-bold transition bg-green-600 text-white shadow-sm";
+                viewList.classList.remove('hidden');
+                renderReportsList();
+            } else if (tab === 'form') {
+                formBtn.className = "flex-1 md:flex-none px-5 py-2.5 rounded-xl text-sm font-bold transition bg-green-600 text-white shadow-sm";
+                viewForm.classList.remove('hidden');
+                if (!editingTargetAuthorId) {
+                    populateUserForm();
+                }
+            } else if (tab === 'users') {
+                usersBtn.className = "flex-1 md:flex-none px-5 py-2.5 rounded-xl text-sm font-bold transition bg-green-600 text-white shadow-sm";
+                viewUsers.classList.remove('hidden');
+            }
+        }
+
+        // Render Reports List
+        function renderReportsList() {
+            const container = document.getElementById('reportsListContainer');
+            container.innerHTML = '';
+
+            document.getElementById('reportCountBadge').innerText = `총 ${reportsData.length}건의 보고`;
+
+            const authorOrder = ['강은하', '박원석', '파리드', '윤선한'];
+            const sortedReports = [...reportsData].sort((a, b) => {
+                let idxA = authorOrder.indexOf(a.authorName);
+                let idxB = authorOrder.indexOf(b.authorName);
+                return (idxA === -1 ? 99 : idxA) - (idxB === -1 ? 99 : idxB);
+            });
+
+            sortedReports.forEach(report => {
+                const card = document.createElement('div');
+                card.className = "border border-slate-200 rounded-2xl overflow-hidden shadow-sm bg-white";
+
+                let rowsHtml = '';
+                (report.projects || []).forEach(p => {
+                    rowsHtml += `
+                        <tr class="border-t border-slate-200 text-xs text-slate-700">
+                            <td class="p-3 font-semibold text-center bg-slate-50 border-r border-slate-200">${p.project || '-'}</td>
+                            <td class="p-3 text-center border-r border-slate-200">${p.customer || '-'}</td>
+                            <td class="p-3 border-r border-slate-200">
+                                <div class="font-bold text-slate-800 mb-1">${p.item || '-'}</div>
+                                <div class="flex text-[10px] text-slate-500 justify-between bg-slate-100 p-1 rounded">
+                                    <span>START: ${p.startDate || '-'}</span>
+                                    <span>END: ${p.endDate || '-'}</span>
+                                </div>
+                            </td>
+                            <td class="p-3 text-center font-bold border-r border-slate-200 bg-blue-50/50 text-blue-700">${p.rate || '0'}%</td>
+                            <td class="p-3 border-r border-slate-200 whitespace-pre-line">${p.thisWeek || '-'}</td>
+                            <td class="p-3 border-r border-slate-200 whitespace-pre-line">${p.nextWeek || '-'}</td>
+                            <td class="p-3 border-r border-slate-200 whitespace-pre-line text-slate-600">${p.issues || '-'}</td>
+                            <td class="p-3 text-center font-medium">${p.code || '-'}</td>
+                        </tr>
+                    `;
+                });
+
+                // Check Edit Permission: Admin (shyoon) can edit all, others can only edit their own
+                const canEdit = (currentUser.role === '팀장' || currentUser.id === 'shyoon' || report.authorId === currentUser.id);
+
+                card.innerHTML = `
+                    <div class="bg-slate-100 px-5 py-3 border-b border-slate-200 flex justify-between items-center">
+                        <div class="flex items-center space-x-2">
+                            <span class="font-bold text-slate-800 text-sm">Prepared by ${report.authorName}</span>
+                            ${!canEdit ? '<span class="text-xs text-slate-400"><i class="fa-solid fa-lock ml-1"></i> 읽기 전용</span>' : ''}
+                        </div>
+                        ${canEdit ? 
+                            `<button onclick="editReport('${report.authorId}')" class="text-xs text-green-700 bg-green-100 hover:bg-green-200 font-semibold px-3 py-1 rounded-lg transition">
+                                <i class="fa-solid fa-pen-to-square mr-1"></i> ${report.authorId === currentUser.id ? '내 보고 수정' : '보고 수정 (관리자)'}
+                            </button>` : ''}
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-lime-600 text-white text-xs font-bold border-b border-slate-300">
+                                    <th class="p-3 text-center w-28">Project</th>
+                                    <th class="p-3 text-center w-28">Customer</th>
+                                    <th class="p-3 text-center w-40">Item</th>
+                                    <th class="p-3 text-center w-24">Rate of progress</th>
+                                    <th class="p-3 w-48">This Week</th>
+                                    <th class="p-3 w-48">Next Week</th>
+                                    <th class="p-3 w-64">Issues</th>
+                                    <th class="p-3 text-center w-20">Code</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${rowsHtml}
+                            </tbody>
+                        </table>
+                    </div>
+                    ${report.otherTask ? `
+                        <div class="p-4 bg-slate-50 border-t border-slate-200 text-xs">
+                            <span class="font-bold text-slate-700 mr-2">Other:</span> ${report.otherTask}
+                        </div>
+                    ` : ''}
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // Edit specific user report (Admin or Author)
+        let editingTargetAuthorId = null;
+        function editReport(authorId) {
+            editingTargetAuthorId = authorId;
+            const container = document.getElementById('projectRowsContainer');
+            container.innerHTML = '';
+
+            const targetReport = reportsData.find(r => r.authorId === authorId);
+            if (targetReport && targetReport.projects && targetReport.projects.length > 0) {
+                targetReport.projects.forEach(p => {
+                    container.appendChild(createProjectRow(p));
+                });
+                document.getElementById('otherTask').value = targetReport.otherTask || '';
+            } else {
+                container.appendChild(createProjectRow());
+                document.getElementById('otherTask').value = '';
+            }
+            switchTab('form');
+        }
+
+        // Populate Form for Current User Edit
+        function populateUserForm() {
+            editingTargetAuthorId = currentUser.id;
+            const container = document.getElementById('projectRowsContainer');
+            container.innerHTML = '';
+
+            const userReport = reportsData.find(r => r.authorId === currentUser.id);
+            if (userReport && userReport.projects && userReport.projects.length > 0) {
+                userReport.projects.forEach(p => {
+                    container.appendChild(createProjectRow(p));
+                });
+                document.getElementById('otherTask').value = userReport.otherTask || '';
+            } else {
+                container.appendChild(createProjectRow());
+                document.getElementById('otherTask').value = '';
+            }
+        }
+
+        // Dynamic Form Rows with Start Date & End Date
+        function createProjectRow(data = {}) {
+            const rowId = 'row_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
+            const div = document.createElement('div');
+            div.className = "p-5 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-4 relative";
+            div.id = rowId;
+
+            let projOptionsHtml = PROJECT_OPTIONS.map(opt => 
+                `<option value="${opt}" ${data.project === opt ? 'selected' : ''}>${opt}</option>`
+            ).join('');
+
+            div.innerHTML = `
+                <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">프로젝트 세부 항목</span>
+                    <button type="button" onclick="removeProjectRow('${rowId}')" class="text-red-500 hover:text-red-700 text-xs font-medium transition flex items-center bg-red-50 px-2.5 py-1 rounded-lg">
+                        <i class="fa-solid fa-trash-can mr-1"></i> 항목 삭제
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">Project</label>
+                        <select class="p-project w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm bg-white outline-none focus:ring-2 focus:ring-green-500">
+                            ${projOptionsHtml}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">Customer</label>
+                        <input type="text" class="p-customer w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-green-500" placeholder="고객사" value="${data.customer || ''}">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">Item명</label>
+                        <input type="text" class="p-item w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-green-500" placeholder="아이템명" value="${data.item || ''}">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">시작일자</label>
+                        <input type="text" class="p-startdate w-full px-3 py-2.5 border border-slate-300 rounded-xl text-xs text-center outline-none focus:ring-2 focus:ring-green-500" placeholder="11/25" value="${data.startDate || ''}">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">종료일자</label>
+                        <input type="text" class="p-enddate w-full px-3 py-2.5 border border-slate-300 rounded-xl text-xs text-center outline-none focus:ring-2 focus:ring-green-500" placeholder="04/16" value="${data.endDate || ''}">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">진행률 (%)</label>
+                        <input type="number" min="0" max="100" class="p-rate w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm text-center outline-none focus:ring-2 focus:ring-green-500" placeholder="50" value="${data.rate || '0'}">
+                    </div>
+                    <div class="md:col-span-5">
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">Code</label>
+                        <input type="text" class="p-code w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-green-500" placeholder="예: 26GP 강은하" value="${data.code || ''}">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">This Week (금주 실적)</label>
+                        <textarea rows="3" class="p-thisweek w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-green-500" placeholder="금주 진행 내역을 입력하세요">${data.thisWeek || ''}</textarea>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">Next Week (차주 계획)</label>
+                        <textarea rows="3" class="p-nextweek w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-green-500" placeholder="차주 예정 계획을 입력하세요">${data.nextWeek || ''}</textarea>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">Issues (이슈 및 특이사항)</label>
+                    <textarea rows="3" class="p-issues w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-green-500" placeholder="이슈 및 진행 사항 상세를 입력하세요">${data.issues || ''}</textarea>
+                </div>
+            `;
+            return div;
+        }
+
+        function addProjectRow() {
+            const container = document.getElementById('projectRowsContainer');
+            container.appendChild(createProjectRow());
+        }
+
+        function removeProjectRow(rowId) {
+            const container = document.getElementById('projectRowsContainer');
+            if (container.children.length <= 1) {
+                showToast('최소 1개 이상의 프로젝트 항목이 필요합니다.', 'error');
+                return;
+            }
+            const target = document.getElementById(rowId);
+            if (target) target.remove();
+        }
+
+        // Form Submit Handler (Cloud Synced)
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            const container = document.getElementById('projectRowsContainer');
+            const rowEls = container.querySelectorAll(':scope > div');
+
+            const projects = [];
+            rowEls.forEach(el => {
+                projects.push({
+                    project: el.querySelector('.p-project').value,
+                    customer: el.querySelector('.p-customer').value.trim(),
+                    item: el.querySelector('.p-item').value.trim(),
+                    startDate: el.querySelector('.p-startdate').value.trim(),
+                    endDate: el.querySelector('.p-enddate').value.trim(),
+                    rate: el.querySelector('.p-rate').value.trim(),
+                    thisWeek: el.querySelector('.p-thisweek').value.trim(),
+                    nextWeek: el.querySelector('.p-nextweek').value.trim(),
+                    issues: el.querySelector('.p-issues').value.trim(),
+                    code: el.querySelector('.p-code').value.trim()
+                });
+            });
+
+            const otherTask = document.getElementById('otherTask').value.trim();
+            const targetAuthorId = editingTargetAuthorId || currentUser.id;
+            const targetUser = usersData.find(u => u.id === targetAuthorId) || currentUser;
+
+            const existingIndex = reportsData.findIndex(r => r.authorId === targetAuthorId);
+            const reportObj = {
+                id: existingIndex >= 0 ? reportsData[existingIndex].id : 'rep_' + targetAuthorId,
+                authorId: targetAuthorId,
+                authorName: targetUser.name,
+                projects: projects,
+                otherTask: otherTask
+            };
+
+            if (db && cloudUser) {
+                try {
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'reports', targetAuthorId), reportObj);
+                    showToast('주간 업무 보고가 클라우드에 실시간 저장되었습니다.', 'success');
+                } catch (err) {
+                    console.error("Save report error:", err);
+                    showToast('저장 중 오류가 발생했습니다.', 'error');
+                    return;
+                }
+            } else {
+                if (existingIndex >= 0) reportsData[existingIndex] = reportObj;
+                else reportsData.unshift(reportObj);
+                showToast('주간 업무 보고가 저장되었습니다.', 'success');
+            }
+
+            editingTargetAuthorId = null;
+            switchTab('list');
+        }
+
+        // Change Password Handler (Cloud Synced)
+        async function handleChangePassword(e) {
+            e.preventDefault();
+            const currentPw = document.getElementById('currentPw').value.trim();
+            const newPw = document.getElementById('newPw').value.trim();
+
+            if (currentUser.pw !== currentPw) {
+                showToast('현재 비밀번호가 올바르지 않습니다.', 'error');
+                return;
+            }
+
+            const updatedUser = { ...currentUser, pw: newPw };
+
+            if (db && cloudUser) {
+                try {
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.id), updatedUser);
+                    currentUser = updatedUser;
+                    sessionStorage.setItem('shinhotek_session', JSON.stringify(currentUser));
+                    showToast('비밀번호가 클라우드에 성공적으로 변경되었습니다.', 'success');
+                } catch (err) {
+                    console.error("Change password error:", err);
+                    showToast('비밀번호 변경 중 오류가 발생했습니다.', 'error');
+                    return;
+                }
+            } else {
+                const idx = usersData.findIndex(u => u.id === currentUser.id);
+                if (idx >= 0) usersData[idx].pw = newPw;
+                currentUser.pw = newPw;
+                sessionStorage.setItem('shinhotek_session', JSON.stringify(currentUser));
+                showToast('비밀번호가 성공적으로 변경되었습니다.', 'success');
+            }
+
+            document.getElementById('currentPw').value = '';
+            document.getElementById('newPw').value = '';
+        }
+
+        // Create User Handler (Admin Only & Cloud Synced)
+        async function handleCreateUser(e) {
+            e.preventDefault();
+            if (currentUser.role !== '팀장' && currentUser.id !== 'shyoon') {
+                showToast('계정 생성 권한이 없습니다.', 'error');
+                return;
+            }
+
+            const id = document.getElementById('newUserId').value.trim();
+            const name = document.getElementById('newUserName').value.trim();
+            const pw = document.getElementById('newUserPw').value.trim();
+
+            if (usersData.some(u => u.id === id)) {
+                showToast('이미 존재하는 아이디입니다.', 'error');
+                return;
+            }
+
+            const newUserObj = { id, name, pw, role: '연구원' };
+
+            if (db && cloudUser) {
+                try {
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', id), newUserObj);
+                    showToast(`신규 계정 [${name}] 클라우드 등록 완료!`, 'success');
+                } catch (err) {
+                    console.error("Create user error:", err);
+                    showToast('계정 등록 중 오류가 발생했습니다.', 'error');
+                    return;
+                }
+            } else {
+                usersData.push(newUserObj);
+                showToast(`신규 계정 [${name}] 등록 완료!`, 'success');
+            }
+
+            document.getElementById('newUserId').value = '';
+            document.getElementById('newUserName').value = '';
+            document.getElementById('newUserPw').value = '';
+        }
+
+        // Expose handlers globally for inline HTML onclick/onsubmit attributes
+        window.handleLogin = handleLogin;
+        window.handleLogout = handleLogout;
+        window.switchTab = switchTab;
+        window.editReport = editReport;
+        window.addProjectRow = addProjectRow;
+        window.removeProjectRow = removeProjectRow;
+        window.handleFormSubmit = handleFormSubmit;
+        window.handleChangePassword = handleChangePassword;
+        window.handleCreateUser = handleCreateUser;
+        window.exportToExcel = exportToExcel;
+
+        // Toast Notification
+        function showToast(msg, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.className = "fixed bottom-5 right-5 px-5 py-3 rounded-xl text-white font-medium text-sm shadow-2xl z-50 transition transform duration-300";
+
+            if (type === 'success') toast.classList.add('bg-emerald-600');
+            else if (type === 'error') toast.classList.add('bg-red-600');
+            else toast.classList.add('bg-slate-800');
+
+            toast.classList.remove('hidden');
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3000);
+        }
+
+        // Excel Export Logic Matching EXACT 2nd Reference Image
+        function exportToExcel() {
+            if (!reportsData || reportsData.length === 0) {
+                showToast('내보낼 업무 보고 데이터가 없습니다.', 'error');
+                return;
+            }
+
+            const wb = XLSX.utils.book_new();
+            const ws = {};
+
+            // Styling Definitions
+            const fontMain = "Malgun Gothic";
+            const borderThin = {
+                top: { style: "thin", color: { rgb: "000000" } },
+                bottom: { style: "thin", color: { rgb: "000000" } },
+                left: { style: "thin", color: { rgb: "000000" } },
+                right: { style: "thin", color: { rgb: "000000" } }
+            };
+
+            const headerStyle = {
+                font: { name: fontMain, sz: 10, bold: true, color: { rgb: "000000" } },
+                alignment: { horizontal: "center", vertical: "center" },
+                fill: { fgColor: { rgb: "80C040" } }, // Exact Lime Green fill in Picture 2
+                border: borderThin
+            };
+
+            const preparedStyle = {
+                font: { name: fontMain, sz: 12, bold: true, color: { rgb: "000000" } },
+                alignment: { horizontal: "left", vertical: "center" }
+            };
+
+            const cellCenter = {
+                font: { name: fontMain, sz: 9 },
+                alignment: { horizontal: "center", vertical: "center", wrapText: true },
+                border: borderThin
+            };
+
+            const cellLeft = {
+                font: { name: fontMain, sz: 9 },
+                alignment: { horizontal: "left", vertical: "center", wrapText: true },
+                border: borderThin
+            };
+
+            const subHeaderStyle = {
+                font: { name: fontMain, sz: 8, color: { rgb: "555555" } },
+                alignment: { horizontal: "center", vertical: "center" },
+                border: borderThin,
+                fill: { fgColor: { rgb: "F2F2F2" } }
+            };
+
+            ws['!merges'] = [];
+            ws['!rows'] = [];
+            let rIdx = 0;
+
+            // Row 0: Title Header Row (Height: 35)
+            ws['!rows'][0] = { hpt: 35 };
+            // Left Logo text
+            ws[XLSX.utils.encode_cell({ r: 0, c: 0 })] = {
+                v: "◇ SHINHOTEK",
+                t: "s",
+                s: { font: { name: fontMain, sz: 11, bold: true, color: { rgb: "004080" } }, alignment: { vertical: "center" } }
+            };
+            // Center Main Title
+            ws[XLSX.utils.encode_cell({ r: 0, c: 3 })] = {
+                v: "신호텍 연구소 주간업무보고",
+                t: "s",
+                s: { font: { name: fontMain, sz: 16, bold: true }, alignment: { horizontal: "center", vertical: "center" } }
+            };
+            ws['!merges'].push({ s: { r: 0, c: 3 }, e: { r: 0, c: 6 } });
+            
+            rIdx += 2; // Blank row 1
+
+            const authorOrder = ['강은하', '박원석', '파리드', '윤선한'];
+            const sortedReports = [...reportsData].sort((a, b) => {
+                let idxA = authorOrder.indexOf(a.authorName);
+                let idxB = authorOrder.indexOf(b.authorName);
+                return (idxA === -1 ? 99 : idxA) - (idxB === -1 ? 99 : idxB);
+            });
+
+            sortedReports.forEach(userReport => {
+                // Prepared by row (No green fill, white background left aligned)
+                ws['!rows'][rIdx] = { hpt: 22 };
+                ws[XLSX.utils.encode_cell({ r: rIdx, c: 0 })] = {
+                    v: `Prepared by  ${userReport.authorName}`,
+                    t: "s",
+                    s: preparedStyle
+                };
+                rIdx++;
+
+                // Table Header Row (Height: 24)
+                ws['!rows'][rIdx] = { hpt: 24 };
+                const headers = [
+                    { name: "Project", col: 0 },
+                    { name: "Customer", col: 1 },
+                    { name: "Item", col: 2 }, // Will merge C, D, E for item header
+                    { name: "Rate of progress", col: 5 },
+                    { name: "This Week", col: 6 },
+                    { name: "Next Week", col: 7 },
+                    { name: "Issues", col: 8 },
+                    { name: "Code", col: 9 }
+                ];
+
+                headers.forEach(h => {
+                    ws[XLSX.utils.encode_cell({ r: rIdx, c: h.col })] = { v: h.name, t: "s", s: headerStyle };
+                });
+                // Ensure all merged cells in header also get border style
+                ws[XLSX.utils.encode_cell({ r: rIdx, c: 3 })] = { v: "", t: "s", s: headerStyle };
+                ws[XLSX.utils.encode_cell({ r: rIdx, c: 4 })] = { v: "", t: "s", s: headerStyle };
+
+                // Merge Item Header across C, D, E
+                ws['!merges'].push({ s: { r: rIdx, c: 2 }, e: { r: rIdx, c: 4 } });
+                rIdx++;
+
+                // Process Projects
+                const projs = userReport.projects || [];
+                projs.forEach(proj => {
+                    const startR = rIdx;
+
+                    ws['!rows'][rIdx] = { hpt: 20 };
+                    ws['!rows'][rIdx + 1] = { hpt: 16 };
+                    ws['!rows'][rIdx + 2] = { hpt: 18 };
+
+                    // Project & Customer (Fill all merged cells to guarantee outer and inner borders)
+                    for (let dr = 0; dr < 3; dr++) {
+                        ws[XLSX.utils.encode_cell({ r: startR + dr, c: 0 })] = { v: dr === 0 ? (proj.project || "-") : "", t: "s", s: cellCenter };
+                        ws[XLSX.utils.encode_cell({ r: startR + dr, c: 1 })] = { v: dr === 0 ? (proj.customer || "-") : "", t: "s", s: cellCenter };
+                    }
+                    ws['!merges'].push({ s: { r: startR, c: 0 }, e: { r: startR + 2, c: 0 } });
+                    ws['!merges'].push({ s: { r: startR, c: 1 }, e: { r: startR + 2, c: 1 } });
+
+                    // Item structure (C, D, E columns across 3 rows)
+                    // Row 1: Item Name (cols 2, 3, 4)
+                    ws[XLSX.utils.encode_cell({ r: startR, c: 2 })] = { v: proj.item || "-", t: "s", s: cellCenter };
+                    ws[XLSX.utils.encode_cell({ r: startR, c: 3 })] = { v: "", t: "s", s: cellCenter };
+                    ws[XLSX.utils.encode_cell({ r: startR, c: 4 })] = { v: "", t: "s", s: cellCenter };
+                    ws['!merges'].push({ s: { r: startR, c: 2 }, e: { r: startR, c: 4 } });
+
+                    // Row 2: START / END labels (col 2 vs cols 3,4)
+                    ws[XLSX.utils.encode_cell({ r: startR + 1, c: 2 })] = { v: "START", t: "s", s: subHeaderStyle };
+                    ws[XLSX.utils.encode_cell({ r: startR + 1, c: 3 })] = { v: "END", t: "s", s: subHeaderStyle };
+                    ws[XLSX.utils.encode_cell({ r: startR + 1, c: 4 })] = { v: "", t: "s", s: subHeaderStyle };
+                    ws['!merges'].push({ s: { r: startR + 1, c: 3 }, e: { r: startR + 1, c: 4 } });
+
+                    // Row 3: Date Values (col 2 vs cols 3,4)
+                    ws[XLSX.utils.encode_cell({ r: startR + 2, c: 2 })] = { v: proj.startDate || "-", t: "s", s: cellCenter };
+                    ws[XLSX.utils.encode_cell({ r: startR + 2, c: 3 })] = { v: proj.endDate || "-", t: "s", s: cellCenter };
+                    ws[XLSX.utils.encode_cell({ r: startR + 2, c: 4 })] = { v: "", t: "s", s: cellCenter };
+                    ws['!merges'].push({ s: { r: startR + 2, c: 3 }, e: { r: startR + 2, c: 4 } });
+
+                    // Rate of Progress (Column F) merged 3 rows
+                    let rateVal = (parseInt(proj.rate) || 0) / 100;
+                    const rateStyle = {
+                        font: { name: fontMain, sz: 10, bold: true },
+                        alignment: { horizontal: "center", vertical: "center" },
+                        fill: { fgColor: { rgb: "C6D9F1" } },
+                        border: borderThin,
+                        numFmt: "0%"
+                    };
+                    for (let dr = 0; dr < 3; dr++) {
+                        ws[XLSX.utils.encode_cell({ r: startR + dr, c: 5 })] = { v: dr === 0 ? rateVal : "", t: dr === 0 ? "n" : "s", s: rateStyle };
+                    }
+                    ws['!merges'].push({ s: { r: startR, c: 5 }, e: { r: startR + 2, c: 5 } });
+
+                    // This Week, Next Week, Issues, Code merged 3 rows
+                    const textCols = [6, 7, 8, 9];
+                    const textVals = [proj.thisWeek || "-", proj.nextWeek || "-", proj.issues || "-", proj.code || "-"];
+                    const textStyles = [cellLeft, cellLeft, cellLeft, cellCenter];
+
+                    textCols.forEach((colIdx, i) => {
+                        for (let dr = 0; dr < 3; dr++) {
+                            ws[XLSX.utils.encode_cell({ r: startR + dr, c: colIdx })] = {
+                                v: dr === 0 ? textVals[i] : "",
+                                t: "s",
+                                s: textStyles[i]
+                            };
+                        }
+                        ws['!merges'].push({ s: { r: startR, c: colIdx }, e: { r: startR + 2, c: colIdx } });
+                    });
+
+                    rIdx += 3;
+                });
+
+                // Other Section matching requested layout
+                if (userReport.otherTask) {
+                    ws['!rows'][rIdx] = { hpt: 72 };
+                    
+                    const otherLabelStyle = {
+                        font: { name: fontMain, sz: 11, bold: true, color: { rgb: "000000" } },
+                        alignment: { horizontal: "center", vertical: "center" },
+                        border: borderThin
+                    };
+
+                    // Fill cells from c=0 to c=5 for "Other" merged label
+                    for (let c = 0; c <= 5; c++) {
+                        ws[XLSX.utils.encode_cell({ r: rIdx, c: c })] = { v: c === 0 ? "Other" : "", t: "s", s: otherLabelStyle };
+                    }
+                    ws['!merges'].push({ s: { r: rIdx, c: 0 }, e: { r: rIdx, c: 5 } });
+
+                    // This Week / Next Week / Issues / Code columns (c=6 to 9) with explicit thin borders
+                    for (let c = 6; c <= 9; c++) {
+                        ws[XLSX.utils.encode_cell({ r: rIdx, c: c })] = { v: c === 6 ? userReport.otherTask : "", t: "s", s: cellLeft };
+                    }
+                    ws['!merges'].push({ s: { r: rIdx, c: 6 }, e: { r: rIdx, c: 8 } });
+                    rIdx++;
+                } else {
+                    // Always output Other row even if empty, matching exact reference image structure
+                    ws['!rows'][rIdx] = { hpt: 72 };
+                    const otherLabelStyle = {
+                        font: { name: fontMain, sz: 11, bold: true, color: { rgb: "000000" } },
+                        alignment: { horizontal: "center", vertical: "center" },
+                        border: borderThin
+                    };
+                    for (let c = 0; c <= 5; c++) {
+                        ws[XLSX.utils.encode_cell({ r: rIdx, c: c })] = { v: c === 0 ? "Other" : "", t: "s", s: otherLabelStyle };
+                    }
+                    ws['!merges'].push({ s: { r: rIdx, c: 0 }, e: { r: rIdx, c: 5 } });
+
+                    for (let c = 6; c <= 9; c++) {
+                        ws[XLSX.utils.encode_cell({ r: rIdx, c: c })] = { v: "-", t: "s", s: cellLeft };
+                    }
+                    ws['!merges'].push({ s: { r: rIdx, c: 6 }, e: { r: rIdx, c: 8 } });
+                    rIdx++;
+                }
+
+                ws['!rows'][rIdx] = { hpt: 15 }; // Spacer
+                rIdx++;
+            });
+
+            ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: rIdx, c: 9 } });
+            ws['!cols'] = [
+                { wch: 18 }, // Project
+                { wch: 16 }, // Customer
+                { wch: 10 }, // Item Name / Start Date
+                { wch: 10 }, // End Date
+                { wch: 10 }, // Sub-item merge
+                { wch: 16 }, // Rate of progress
+                { wch: 32 }, // This Week
+                { wch: 32 }, // Next Week
+                { wch: 55 }, // Issues (Wide)
+                { wch: 14 }  // Code
+            ];
+
+            XLSX.utils.book_append_sheet(wb, ws, "주간업무보고");
+            XLSX.writeFile(wb, `신호텍_연구소_주간업무보고_${new Date().toISOString().slice(0, 10)}.xlsx`);
+        }
+
+        // Initialize on Window Load
+        window.onload = function() {
+            initApp();
+        };
+    </script>
+</body>
+</html>
